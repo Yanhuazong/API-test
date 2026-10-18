@@ -1,0 +1,1585 @@
+{
+  "info": {
+    "_postman_id": "c59b09a5-851e-4d63-ae33-0f94f9817058",
+    "name": "API Investigation Lab",
+    "description": "Fictional advising API investigation. Import the environment template and fill it locally from the private handout. User identity is explicit on every request; no mutable current-user setting is used. Run the 00 Deterministic automated sequence folder from a fresh reset. The eight nested sections execute in order. Folder 01 Exploratory requests is separate and each request states its prerequisites.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const expected = Number(pm.variables.get('expectedStatus'));",
+          "pm.test('Expected HTTP status ' + expected, function () { pm.response.to.have.status(expected); });",
+          "let body = {}; try { body = pm.response.json(); } catch (e) {}",
+          "if (expected >= 400) {",
+          "  pm.test('Standard error envelope and request ID', function () { pm.expect(body.error).to.be.an('object'); pm.expect(body.error.code).to.be.a('string'); pm.expect(body.requestId).to.be.a('string'); });",
+          "  const code = pm.variables.get('expectedErrorCode');",
+          "  if (code) pm.test('Stable error code: ' + code, function () { pm.expect(body.error.code).to.eql(code); });",
+          "} else if (pm.request.url.getPath().indexOf('/api/health') === -1) {",
+          "  pm.test('Success response envelope', function () { pm.expect(body.data).to.exist; });",
+          "}",
+          "const path = pm.request.url.getPath();",
+          "if (expected < 400 && pm.request.method === 'GET' && (path === '/api/slots' || path === '/api/bookings')) pm.test('Paginated response shape', function () { pm.expect(body.pagination.limit).to.be.a('number'); pm.expect(body.pagination.offset).to.be.a('number'); pm.expect(body.pagination).to.have.property('nextOffset'); pm.expect(body.pagination.hasMore).to.be.a('boolean'); });",
+          "if (expected === 201 && pm.request.method === 'POST' && path === '/api/bookings') pm.test('Created booking fields', function () { ['id','studentId','slotId','status'].forEach(function (key) { pm.expect(body.data).to.have.property(key); }); });",
+          "pm.test('No credential hashes are returned', function () { const text = JSON.stringify(body); pm.expect(text).not.to.include('tokenHash'); pm.expect(text).not.to.include('keyHash'); });",
+          "if (expected < 400 && /\\/api\\/(services|slots)/.test(path)) {",
+          "  const rows = Array.isArray(body.data) ? body.data : [body.data];",
+          "  pm.test('Public response excludes private fields', function () { rows.forEach(function (row) { pm.expect(row).not.to.have.property('email'); pm.expect(row).not.to.have.property('internalNote'); pm.expect(row).not.to.have.property('privateNote'); pm.expect(row).not.to.have.property('studentId'); }); });",
+          "}",
+          "if (expected < 400 && /\\/api\\/bookings/.test(path) && pm.request.method === 'GET') {",
+          "  const auth = pm.request.headers.get('Authorization') || '';",
+          "  const rows = Array.isArray(body.data) ? body.data : [body.data];",
+          "  const isDetail = /\\/api\\/bookings\\/[^/]+$/.test(path);",
+          "  if (isDetail && auth.indexOf(pm.environment.get('advisorToken')) !== -1) pm.test('Assigned advisor receives privateNote', function () { rows.forEach(function (row) { pm.expect(row).to.have.property('privateNote'); }); });",
+          "  else pm.test('Student and booking-list responses omit privateNote', function () { rows.forEach(function (row) { pm.expect(row).not.to.have.property('privateNote'); }); });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Deterministic automated sequence - run this folder in order",
+      "description": "Runs from a fresh workspace reset, captures manifest values, exercises the complete success/error/state-change flow, and finishes with a clean reset. Select this folder in the Postman Collection Runner; do not run the exploratory folder as part of the sequence.",
+      "item": [
+        {
+          "name": "00 Setup and reset",
+          "item": [
+            {
+              "name": "Health check",
+              "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/api/health"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Workspace reset - Student A",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentAToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/lab/reset"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const m = pm.response.json().data;",
+                      "['testDate','availableSlotId','occupiedSlotId','closedSlotId','publishedServiceId','draftServiceId','studentABookingId','studentAUserId','studentBUserId'].forEach(k => pm.environment.set(k, m[k]));",
+                      "pm.environment.unset('createdBookingId');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Student B initially has no active bookings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/bookings?status=active"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Fresh reset leaves Student B with no active bookings', function () { pm.expect(pm.response.json().data).to.be.an('array').that.is.empty; });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "01 Public reads and JSON",
+          "item": [
+            {
+              "name": "List published services",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/services"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set('publishedServiceId', pm.response.json().data[0].id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Attempt to retrieve draft service",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/services/{{draftServiceId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 404);",
+                      "pm.variables.set('expectedErrorCode', 'SERVICE_NOT_FOUND');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Draft service slots are absent from public results",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?serviceId={{draftServiceId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Draft service has no publicly visible slots', function () { pm.expect(pm.response.json().data).to.be.an('array').that.is.empty; });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "02 Filtering and pagination",
+          "item": [
+            {
+              "name": "Filter slots by UTC date",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?date={{testDate}}&limit=5"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Filter available slots",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?date={{testDate}}&available=true&limit=5"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "First pagination page",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?date={{testDate}}&limit=2&offset=0"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Second pagination page",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?date={{testDate}}&limit=2&offset=2"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid calendar date",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?date=2026-02-30"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'INVALID_QUERY');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Excessive page size",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots?limit=21"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'INVALID_QUERY');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "03 Create and validate",
+          "item": [
+            {
+              "name": "Create valid booking as Student B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slotId\": \"{{availableSlotId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 201);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set('createdBookingId', pm.response.json().data.id);",
+                      "pm.test('Location header points to created record', function () { pm.expect(pm.response.headers.get('Location')).to.eql('/api/bookings/' + pm.environment.get('createdBookingId')); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Missing slotId",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'VALIDATION_ERROR');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Wrong slotId type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":42}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'VALIDATION_ERROR');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Malformed JSON",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'MALFORMED_JSON');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Wrong Content-Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "text/plain"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":\"{{availableSlotId}}\"}"
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 415);",
+                      "pm.variables.set('expectedErrorCode', 'UNSUPPORTED_MEDIA_TYPE');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Attempt studentId injection",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":\"{{availableSlotId}}\",\"studentId\":\"{{studentAUserId}}\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 400);",
+                      "pm.variables.set('expectedErrorCode', 'VALIDATION_ERROR');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "04 Authentication and authorization",
+          "item": [
+            {
+              "name": "Student A identity",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentAToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/me"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Student B identity",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/me"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Protected request without user token",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/me"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 401);",
+                      "pm.variables.set('expectedErrorCode', 'USER_TOKEN_REQUIRED');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Invalid token on public request",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer invalid-invalid-invalid-invalid-token"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/services"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 401);",
+                      "pm.variables.set('expectedErrorCode', 'INVALID_USER_TOKEN');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Student B reads Student A booking",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/bookings/{{studentABookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 403);",
+                      "pm.variables.set('expectedErrorCode', 'BOOKING_FORBIDDEN');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Student B cancels Student A booking",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"canceled\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings/{{studentABookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 403);",
+                      "pm.variables.set('expectedErrorCode', 'BOOKING_FORBIDDEN');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Student A reads own booking",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentAToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/bookings/{{studentABookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Advisor reads booking and privateNote",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{advisorToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/bookings/{{studentABookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Assigned advisor receives privateNote', function () { pm.expect(pm.response.json().data).to.have.property('privateNote'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "05 Cancellation and state changes",
+          "item": [
+            {
+              "name": "Student B cancels own new booking",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"canceled\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings/{{createdBookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set('firstCanceledAt', pm.response.json().data.canceledAt);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Repeat cancellation",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"canceled\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings/{{createdBookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Cancellation timestamp is unchanged', function () { pm.expect(pm.response.json().data.canceledAt).to.eql(pm.environment.get('firstCanceledAt')); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify canceled slot is available",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/slots/{{availableSlotId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Cancellation releases the slot', function () { pm.expect(pm.response.json().data.available).to.eql(true); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Book released slot again",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":\"{{availableSlotId}}\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 201);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.set('previousCanceledBookingId', pm.environment.get('createdBookingId'));",
+                      "pm.environment.set('createdBookingId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Confirm canceled history remains",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/bookings/{{previousCanceledBookingId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Prior booking remains as canceled history', function () { pm.expect(pm.response.json().data.status).to.eql('canceled'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "06 Advisor permissions",
+          "item": [
+            {
+              "name": "Student attempts to close a slot",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"closed\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/slots/{{closedSlotId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 403);",
+                      "pm.variables.set('expectedErrorCode', 'ADVISOR_ONLY');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Reset before advisor state changes",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentAToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/lab/reset"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const m = pm.response.json().data; ['testDate','availableSlotId','occupiedSlotId','closedSlotId','publishedServiceId','draftServiceId','studentABookingId','studentAUserId','studentBUserId'].forEach(k => pm.environment.set(k, m[k]));",
+                      "pm.environment.unset('createdBookingId');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Advisor closes an unoccupied slot",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{advisorToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"closed\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/slots/{{availableSlotId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Advisor cannot close occupied slot",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{advisorToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"status\":\"closed\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/slots/{{occupiedSlotId}}"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 409);",
+                      "pm.variables.set('expectedErrorCode', 'SLOT_HAS_ACTIVE_BOOKING');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "07 Negative cases",
+          "item": [
+            {
+              "name": "Attempt to book occupied slot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":\"{{occupiedSlotId}}\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 409);",
+                      "pm.variables.set('expectedErrorCode', 'SLOT_UNAVAILABLE');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Attempt to book closed slot",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentBToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"slotId\":\"{{closedSlotId}}\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{baseUrl}}/api/bookings"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 409);",
+                      "pm.variables.set('expectedErrorCode', 'SLOT_NOT_BOOKABLE');"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Final clean reset",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Lab-Key",
+                    "value": "{{labKey}}"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{studentAToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/lab/reset"
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set('expectedStatus', 200);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.environment.unset('createdBookingId');",
+                      "pm.environment.unset('previousCanceledBookingId');"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Exploratory requests",
+      "description": "Run independently in any order after importing an environment. Requests that need an existing booking explicitly name that prerequisite.",
+      "item": [
+        {
+          "name": "List Student B bookings (identity set per request)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Lab-Key",
+                "value": "{{labKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentBToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings?status=active&limit=5&offset=0"
+          },
+          "description": "Prerequisite: workspace handout loaded. Returns only the explicitly authenticated Student B's bookings.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Try an unknown query parameter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Lab-Key",
+                "value": "{{labKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/slots?mystery=true"
+          },
+          "description": "No prerequisite. Unknown filters are rejected rather than silently ignored.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 400);",
+                  "pm.variables.set('expectedErrorCode', 'INVALID_QUERY');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read one public slot",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Lab-Key",
+                "value": "{{labKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/slots/{{availableSlotId}}"
+          },
+          "description": "Prerequisite: a reset has populated availableSlotId in this environment.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read a booking as its owner",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Lab-Key",
+                "value": "{{labKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentAToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/{{studentABookingId}}"
+          },
+          "description": "Prerequisite: a reset has populated studentABookingId. Student A is explicitly selected on this request.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset this workspace",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Lab-Key",
+                "value": "{{labKey}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{advisorToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/lab/reset"
+          },
+          "description": "No prerequisite. Resets only the key's workspace. Clears the local createdBookingId.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('expectedStatus', 200);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const m = pm.response.json().data; ['testDate','availableSlotId','occupiedSlotId','closedSlotId','publishedServiceId','draftServiceId','studentABookingId','studentAUserId','studentBUserId'].forEach(k => pm.environment.set(k, m[k]));",
+                  "pm.environment.unset('createdBookingId');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

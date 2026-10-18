@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+coverage/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+lab-output/
+test-results/
