@@ -9,7 +9,7 @@ import { idsForWorkspace, randomSecret, seedWorkspace, stableId, testDateFromNow
 interface Handout {
   workspaceId: string;
   name: string;
-  labKey: string;
+  apiKey: string;
   tokens: { studentA: string; studentB: string; advisor: string };
   manifest: Awaited<ReturnType<typeof seedWorkspace>>;
 }
@@ -36,7 +36,7 @@ async function main() {
     for (let index = 1; index <= count; index += 1) {
       const name = `workspace-${String(index).padStart(2, "0")}`;
       const workspaceId = stableId("api-investigation-lab-classrooms", name);
-      const dir = join("lab-output", name);
+      const dir = join("class-output", name);
       const handoutPath = join(dir, "handout.json");
       let handout = await loadHandout(handoutPath);
       const [existing] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, workspaceId)).limit(1);
@@ -48,10 +48,10 @@ async function main() {
         continue;
       }
       if (!handout) {
-        const labKey = randomSecret();
+        const apiKey = randomSecret();
         const tokens = { studentA: randomSecret(), studentB: randomSecret(), advisor: randomSecret() };
         handout = {
-          workspaceId, name, labKey, tokens,
+          workspaceId, name, apiKey, tokens,
           manifest: {
             workspaceId,
             ...(() => {
@@ -83,7 +83,7 @@ async function main() {
         await tx.insert(schema.workspaces).values({
           id: workspaceId,
           name,
-          keyHash: hashSecret(handout!.labKey),
+          keyHash: hashSecret(handout!.apiKey),
         });
         handout!.manifest = await seedWorkspace(tx, workspaceId, handout!.manifest.testDate, false, {
           studentA: hashSecret(handout!.tokens.studentA),

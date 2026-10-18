@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "API Investigation Lab",
+  title: "API Investigation",
   description: "A fictional campus advising API for learning API design.",
 };
 

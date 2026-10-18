@@ -23,6 +23,7 @@ export interface TestWorkspace {
 
 export let lab: TestWorkspace;
 export let otherLab: TestWorkspace;
+export let rateLab: TestWorkspace;
 
 async function createWorkspace(name: string): Promise<TestWorkspace> {
   const id = randomUUID();
@@ -39,7 +40,7 @@ async function createWorkspace(name: string): Promise<TestWorkspace> {
 
 export function headers(workspace: TestWorkspace, identity?: keyof TestWorkspace["tokens"], extra?: HeadersInit): Headers {
   const result = new Headers(extra);
-  result.set("X-Lab-Key", workspace.key);
+  result.set("X-API-Key", workspace.key);
   if (identity) result.set("Authorization", `Bearer ${workspace.tokens[identity]}`);
   return result;
 }
@@ -55,7 +56,7 @@ export function callApi(
 }
 
 export async function resetWorkspace(workspace: TestWorkspace = lab): Promise<void> {
-  const response = await callApi(workspace, "/api/lab/reset", "studentA", { method: "POST" });
+  const response = await callApi(workspace, "/api/reset", "studentA", { method: "POST" });
   if (!response.ok) throw new Error(`Test workspace reset failed with HTTP ${response.status}.`);
 }
 
@@ -63,10 +64,12 @@ export function installFixtureHooks() {
   before(async () => {
     lab = await createWorkspace(`test-${randomUUID()}`);
     otherLab = await createWorkspace(`test-other-${randomUUID()}`);
+    rateLab = await createWorkspace(`test-rate-${randomUUID()}`);
   });
   after(async () => {
     if (lab) await db.delete(schema.workspaces).where(eq(schema.workspaces.id, lab.id));
     if (otherLab) await db.delete(schema.workspaces).where(eq(schema.workspaces.id, otherLab.id));
+    if (rateLab) await db.delete(schema.workspaces).where(eq(schema.workspaces.id, rateLab.id));
     await pool.end();
   });
 }

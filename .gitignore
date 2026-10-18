@@ -7,5 +7,5 @@ dist/
 .env
 .env.*
 !.env.example
-lab-output/
+class-output/
 test-results/

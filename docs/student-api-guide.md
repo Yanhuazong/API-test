@@ -2,16 +2,25 @@
 
 ## Credentials and base URL
 
-Your instructor assigns one workspace. Run the API at `http://localhost:3000`
-or use the instructor's deployment URL. In Postman, set `baseUrl`, `labKey`,
-and the three identity tokens from your assigned private workspace handout.
-Keep secrets in your local Postman environment; do not export or share an
-environment containing credentials.
+Your instructor assigns one workspace and tells you the API's base URL. In a
+class, the instructor will usually provide a shared hosted URL, such as a
+Vercel deployment. Use that URL in Postman's `baseUrl` variable.
 
-Every request other than `GET /api/health` sends `X-Lab-Key: {{labKey}}`.
+`http://localhost:3000` is only for a server running on the same computer as
+Postman. It is not a shared classroom address: if your instructor runs the
+server on their laptop, students cannot reach it using their own
+`localhost`. The instructor can instead deploy the server or make it available
+on a reachable network address.
+
+You do not need to build the backend. In Postman, set `apiKey` and the three
+identity tokens from your assigned private workspace handout. Keep secrets in
+your local Postman environment; do not export or share an environment
+containing credentials.
+
+Every request other than `GET /api/health` sends `X-API-Key: {{apiKey}}`.
 Token-authenticated requests also send
 `Authorization: Bearer {{studentAToken}}` (or the relevant identity token).
-Set identity explicitly on each request. The lab key is a classroom isolation
+Set identity explicitly on each request. The API key is a classroom isolation
 mechanism, not user authentication.
 
 “Public” below means available without a user token **inside your assigned
@@ -28,7 +37,7 @@ workspace**. Invalid tokens are rejected even on these public reads.
   and releases the slot.
 
 Each record has a UUID. Database relationships and requests are restricted to
-the workspace selected by the lab key.
+the workspace selected by the API key.
 
 ## Endpoint reference
 
@@ -45,7 +54,7 @@ the workspace selected by the lab key.
 | GET | `/api/bookings/:id` | UUID path | Owner or assigned advisor | 200; another student gets 403; other workspace gets 404 |
 | PATCH | `/api/bookings/:id` | `{ "status": "canceled" }` | Owner or assigned advisor | 200; canceled history retained |
 | PATCH | `/api/slots/:id` | `{ "status": "open" }`, `{ "status": "closed" }`, and/or `{ "room": "..." }` | Assigned advisor | 200; active-booking closure is 409 |
-| POST | `/api/lab/reset` | no body | Any valid identity in workspace | 200 restore manifest; workspace-scoped |
+| POST | `/api/reset` | no body | Any valid identity in workspace | 200 restore manifest; workspace-scoped |
 
 List routes use:
 
@@ -66,14 +75,14 @@ List services:
 
 ```http
 GET /api/services
-X-Lab-Key: <your workspace key>
+X-API-Key: <your workspace key>
 ```
 
 Create a booking. Set the identity token to Student B for this request:
 
 ```http
 POST /api/bookings
-X-Lab-Key: <your workspace key>
+X-API-Key: <your workspace key>
 Authorization: Bearer <Student B token>
 Content-Type: application/json
 
@@ -132,6 +141,7 @@ calendar date.
 | 403 | Existing in-workspace record, insufficient permission |
 | 404 | Missing or outside-workspace record |
 | 409 | Booking or state conflict |
+| 429 | Rate limit exceeded; wait `Retry-After` seconds |
 | 415 | Body endpoint needs `application/json` |
 | 405 | Unsupported method |
 | 500 | Unexpected internal failure; use requestId when reporting it |
@@ -139,9 +149,25 @@ calendar date.
 Responses are not cached. Never send credentials in screenshots or shared
 exports.
 
+## Rate limits
+
+Real APIs limit how often one client can call them. This API allows **10 requests
+per minute per workspace** (all requests with your API key share the count;
+`POST /api/reset` and `GET /api/health` are not counted). Every response includes:
+
+| Header | Meaning |
+|---|---|
+| `X-RateLimit-Limit` | Requests allowed per minute |
+| `X-RateLimit-Remaining` | Requests you have left in this minute |
+| `X-RateLimit-Reset` | Seconds until the count restarts |
+
+When you go over, you get `429` with `{"error":{"code":"RATE_LIMITED",...}}` and a
+`Retry-After` header. Wait that many seconds and try again. Note that failed
+requests count too.
+
 ## Reset and troubleshooting
 
-`POST /api/lab/reset` restores only the workspace identified by your key. It
+`POST /api/reset` restores only the workspace identified by your key. It
 resets seed records but keeps the workspace key, tokens, IDs, and saved dates.
 Any fictional identity can reset its workspace as a classroom convenience;
 this is not a production authorization pattern.

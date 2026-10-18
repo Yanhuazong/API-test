@@ -15,7 +15,7 @@ export default async function StudentDocument({ params }: { params: Promise<{ sl
   const markdown = await readFile(join(process.cwd(), "docs", filename), "utf8");
   return (
     <main style={{ maxWidth: 900, margin: "40px auto", padding: "0 24px 60px" }}>
-      <Link href="/" style={{ color: "#075985" }}>← API Investigation Lab</Link>
+      <Link href="/" style={{ color: "#075985" }}>← API Investigation</Link>
       <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", font: "inherit", lineHeight: 1.65 }}>
         {markdown}
       </pre>

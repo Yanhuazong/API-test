@@ -9,7 +9,7 @@ export default function Home() {
         Undergraduate API practice
       </p>
       <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)", lineHeight: 1.04, marginBottom: 16 }}>
-        API Investigation Lab
+        API Investigation
       </h1>
       <p style={{ fontSize: "1.2rem", lineHeight: 1.65, maxWidth: 700 }}>
         Explore a working fictional campus advising API with Postman. Investigate JSON,
@@ -23,14 +23,14 @@ export default function Home() {
           <li>Import the Postman collection and environment; set the supplied credentials locally.</li>
           <li>Read the API guide, then work through the investigation worksheet.</li>
         </ol>
-        <p><strong>Classroom isolation:</strong> Your lab key confines requests to one workspace.
+        <p><strong>Classroom isolation:</strong> Your API key confines requests to one workspace.
           It is a teaching boundary, not a production authentication system.</p>
       </section>
       <nav aria-label="Student resources" style={{ display: "grid", gap: 12 }}>
         <Link style={linkStyle} href="/docs/student-api-guide">Student API guide</Link>
         <Link style={linkStyle} href="/docs/student-investigation">Guided investigation worksheet</Link>
-        <a style={linkStyle} href="/postman/API_Investigation_Lab.postman_collection.json">Postman collection</a>
-        <a style={linkStyle} href="/postman/Lab.postman_environment.json">Postman environment template</a>
+        <a style={linkStyle} href="/postman/API_Investigation.postman_collection.json">Postman collection</a>
+        <a style={linkStyle} href="/postman/API.postman_environment.json">Postman environment template</a>
       </nav>
       <p style={{ color: "#526879", marginTop: 36 }}>All people, services, and records are fictional.</p>
     </main>

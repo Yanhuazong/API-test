@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it } from "node:test";
-import { installFixtureHooks, lab, otherLab, callApi, pool, resetWorkspace } from "./fixture";
+import { beforeEach, describe, it, test } from "node:test";
+import { installFixtureHooks, lab, otherLab, rateLab, callApi, pool, resetWorkspace } from "./fixture";
 
 describe("teaching API integration", () => {
   installFixtureHooks();
@@ -50,7 +50,7 @@ describe("teaching API integration", () => {
     assert.equal((await invalid.json()).error.code, "INVALID_USER_TOKEN");
 
     const mismatch = await callApi(lab, "/api/me", "studentA", {
-      headers: { "X-Lab-Key": otherLab.key },
+      headers: { "X-API-Key": otherLab.key },
     });
     assert.equal(mismatch.status, 401);
   });
@@ -162,7 +162,7 @@ describe("teaching API integration", () => {
       body: JSON.stringify({ slotId: lab.manifest.availableSlotId }),
     });
     assert.equal(created.status, 201);
-    const response = await callApi(lab, "/api/lab/reset", "studentA", { method: "POST" });
+    const response = await callApi(lab, "/api/reset", "studentA", { method: "POST" });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).data.testDate, lab.manifest.testDate);
     const first = await pool.query<{ count: string }>(
@@ -174,4 +174,21 @@ describe("teaching API integration", () => {
     assert.equal(first.rows[0].count, "2");
     assert.equal(secondAfter.rows[0].count, secondBefore.rows[0].count);
   });
+});
+
+test("rate limiting returns 429 with Retry-After, and reset is exempt", async () => {
+  const first = await callApi(rateLab, "/api/services");
+  const limit = Number(first.headers.get("X-RateLimit-Limit"));
+  assert.equal(first.status, 200);
+  assert.equal(Number(first.headers.get("X-RateLimit-Remaining")), limit - 1);
+  let limited: Response | undefined;
+  for (let i = 1; i <= limit && !limited; i += 1) {
+    const response = await callApi(rateLab, "/api/services");
+    if (response.status === 429) limited = response;
+  }
+  assert.ok(limited, "expected a 429 response");
+  assert.equal((await limited.json()).error.code, "RATE_LIMITED");
+  assert.ok(Number(limited.headers.get("Retry-After")) >= 1);
+  assert.equal(limited.headers.get("X-RateLimit-Remaining"), "0");
+  assert.equal((await callApi(rateLab, "/api/reset", "studentA", { method: "POST" })).status, 200);
 });

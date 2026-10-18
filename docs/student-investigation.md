@@ -122,11 +122,22 @@ start fresh.
 
 ### Reset and workspace isolation
 - **Predict:** Which records should reset change?
-- **Send:** Create a booking, call `POST /api/lab/reset`, and verify the seed
+- **Send:** Create a booking, call `POST /api/reset`, and verify the seed
   manifest and original state. Do not attempt to access another group's IDs.
 - **Inspect:** Your workspace returns to its saved seed; credentials and schedule
   remain unchanged.
 - **Explain:** Workspace scoping is enforced by the key and every database operation.
+
+## 6. Rate limits
+
+### Hitting the limit
+- **Predict:** What happens if you send many requests quickly?
+- **Send:** Send `GET /api/services` once and open the response **Headers** tab.
+  Then run the request "Rate limit demo" in the Collection Runner with 15 iterations.
+- **Inspect:** Watch `X-RateLimit-Remaining` fall to 0, then look for 429
+  responses with `RATE_LIMITED` and `Retry-After`. Wait, then send again.
+- **Explain:** Why do providers limit usage? How should a well-behaved app
+  respond to a 429 (back off and retry instead of looping)?
 
 ## Transfer exercise
 

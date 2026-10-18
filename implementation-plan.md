@@ -1,4 +1,4 @@
-# API Investigation Lab implementation plan
+# API Investigation implementation plan
 
 ## Schema
 
@@ -17,9 +17,9 @@ stored once so resets reproduce the same records and dates.
 - Teaching identity and owned/assigned booking operations:
   `GET /api/me`, `GET|POST /api/bookings`, `GET|PATCH /api/bookings/:id`
 - Advisor slot updates: `PATCH /api/slots/:id`
-- Workspace-scoped restore: `POST /api/lab/reset`
+- Workspace-scoped restore: `POST /api/reset`
 
-All teaching API routes require `X-Lab-Key`; token-authenticated routes also
+All teaching API routes require `X-API-Key`; token-authenticated routes also
 require `Authorization: Bearer <opaque-token>`. The key and token are hashed
 at rest, resolved server-side, and must identify the same workspace.
 

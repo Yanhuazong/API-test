@@ -69,6 +69,7 @@ async function main() {
     ...process.env,
     DATABASE_URL: connectionString,
     LAB_TEST_BASE_URL: baseUrl,
+    RATE_LIMIT_PER_MINUTE: "100",
     NEXT_TELEMETRY_DISABLED: "1",
   };
   const nextBin = join(process.cwd(), "node_modules", "next", "dist", "bin", "next");

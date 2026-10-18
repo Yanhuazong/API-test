@@ -93,14 +93,14 @@ export async function seedWorkspace(
     {
       id: ids.publishedServiceId, workspaceId, name: "Course Planning Chat",
       description: "A fictional appointment to discuss course choices.",
-      eligibility: "Open to all students in the practice lab.",
+      eligibility: "Open to all students in the practice class.",
       bookingInstructions: "Choose one open future time.",
       publicationStatus: "published",
     },
     {
       id: ids.secondPublishedServiceId, workspaceId, name: "Study Skills Check-in",
       description: "A fictional conversation about study routines.",
-      eligibility: "Open to all students in the practice lab.",
+      eligibility: "Open to all students in the practice class.",
       bookingInstructions: "Bring one question about studying.",
       publicationStatus: "published",
     },
@@ -172,7 +172,7 @@ export async function seedWorkspace(
 
 export async function lockWorkspace(tx: Tx, workspaceId: string): Promise<boolean> {
   const rows = await tx.execute<{ id: string }>(
-    // A workspace-row lock serializes booking, slot updates, and reset for this lab.
+    // A workspace-row lock serializes booking, slot updates, and reset for this class.
     sql`SELECT id FROM workspaces WHERE id = ${workspaceId} FOR UPDATE`,
   );
   return rows.rows.length > 0;

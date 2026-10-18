@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { NextResponse } from "next/server";
 
 const files = new Set([
-  "API_Investigation_Lab.postman_collection.json",
-  "Lab.postman_environment.json",
+  "API_Investigation.postman_collection.json",
+  "API.postman_environment.json",
 ]);
 
 export const runtime = "nodejs";

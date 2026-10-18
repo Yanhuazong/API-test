@@ -1,5 +1,5 @@
 {
-  "name": "api-investigation-lab",
+  "name": "api-investigation",
   "version": "1.0.0",
   "private": true,
   "engines": {
@@ -12,9 +12,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx scripts/migrate.ts",
-    "lab:provision": "tsx scripts/provision.ts",
-    "lab:reset": "tsx scripts/reset.ts",
-    "lab:refresh-dates": "tsx scripts/refresh-dates.ts",
+    "class:provision": "tsx scripts/provision.ts",
+    "class:reset": "tsx scripts/reset.ts",
+    "class:refresh-dates": "tsx scripts/refresh-dates.ts",
     "test:integration": "tsx scripts/run-http-tests.ts integration",
     "test:concurrency": "tsx scripts/run-http-tests.ts concurrency"
   },

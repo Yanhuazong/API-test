@@ -7,13 +7,16 @@
 2. Copy `.env.example` to `.env`. Set server-only `DATABASE_URL`; for tests,
    configure a separate disposable `INTEGRATION_DATABASE_URL`.
 3. Run `npm ci`, then `npm run db:migrate`.
-4. Run `npm run lab:provision -- --count 6`. The command creates missing
+4. Run `npm run class:provision -- --count 6`. The command creates missing
    `workspace-01` through `workspace-06`; repeated execution preserves existing
    workspace records and private credentials.
-5. Start `npm run dev` and open `http://localhost:3000`.
+5. For instructor-only development, start `npm run dev` and open
+   `http://localhost:3000`. For classroom use, deploy the app or provide a
+   network-reachable URL. Do not give students your laptop's `localhost` URL:
+   from their computers it refers to their own machines, not the instructor's.
 
-Never print, paste into class materials, or commit connection strings, lab keys,
-or user tokens. Keep `lab-output/` private; it is ignored by Git.
+Never print, paste into class materials, or commit connection strings, API keys,
+or user tokens. Keep `class-output/` private; it is ignored by Git.
 
 ## Hosted PostgreSQL
 
@@ -27,11 +30,12 @@ environment. Do not expose a service-role or database credential to the browser.
 | Variable/command | Effect |
 |---|---|
 | `DATABASE_URL` | API, provisioning, and migrations |
+| `RATE_LIMIT_PER_MINUTE` | Optional; requests per workspace per minute (default 10) |
 | `INTEGRATION_DATABASE_URL` | Separate disposable test database only |
 | `npm run db:migrate` | Applies versioned SQL migrations; changes schema |
-| `npm run lab:provision -- --count 6` | Creates missing isolated workspaces and private handouts |
-| `npm run lab:reset -- --workspace workspace-01` | Destructively restores only the specified workspace |
-| `npm run lab:refresh-dates -- --workspace workspace-01` | Replaces seed records and moves that workspace's schedule to future dates |
+| `npm run class:provision -- --count 6` | Creates missing isolated workspaces and private handouts |
+| `npm run class:reset -- --workspace workspace-01` | Destructively restores only the specified workspace |
+| `npm run class:refresh-dates -- --workspace workspace-01` | Replaces seed records and moves that workspace's schedule to future dates |
 | `npm run dev` | Local Next.js development server |
 | `npm run lint`, `npm run typecheck`, `npm run build` | Static and production checks |
 | `npm run test:integration` | HTTP tests against test workspace in `INTEGRATION_DATABASE_URL` |
@@ -47,8 +51,8 @@ schedule but preserves stable seed IDs.
 
 ## Six private workspace handouts
 
-Provision with `npm run lab:provision -- --count 6`. Distribute each distinct
-`lab-output/workspace-NN/handout.json` to only the assigned pair. It contains
+Provision with `npm run class:provision -- --count 6`. Distribute each distinct
+`class-output/workspace-NN/handout.json` to only the assigned pair. It contains
 that workspace's key, Student A/B and advisor tokens, and a non-secret seed
 manifest. Do not email a shared six-workspace bundle or commit these files.
 Students import the Postman template and copy credentials locally.
@@ -62,18 +66,27 @@ the deployment. Provision workspaces from a trusted local environment using
 the same `DATABASE_URL`, then distribute handouts securely. Route Handlers use
 the Node.js runtime and are compatible with Vercel's Node functions.
 
+## Rate limiting
+
+Each workspace may make `RATE_LIMIT_PER_MINUTE` requests per minute (default 10,
+counted per API key in the `rate_limits` table; run `npm run db:migrate` to
+create it). `/api/reset` and `/api/health` are exempt. 10 is low enough that
+students hit it in the Collection Runner demo, but it also means the 38-request
+"Deterministic automated sequence" folder will return 429s at the default. For
+that folder, run it a section at a time, or raise the limit (for example
+`RATE_LIMIT_PER_MINUTE=1000`) for a rehearsal deployment.
+
 ## Teaching authentication and safety
 
-Tokens are random opaque values; only SHA-256 hashes are stored. The lab
-resolves a token to exactly one fictional user and requires its workspace to
-match the lab key. It intentionally skips password entry, MFA, account
+Tokens are random opaque values; only SHA-256 hashes are stored. The APIresolves a token to exactly one fictional user and requires its workspace to
+match the API key. It intentionally skips password entry, MFA, account
 recovery, token expiration/rotation, session revocation, and a full identity
 provider. It is a teaching model, not production authentication. A production
 product needs an appropriate identity provider, account lifecycle, secure
 credential storage and rotation, abuse controls, and a complete authorization
 design.
 
-The lab key is a classroom isolation mechanism, not a replacement for user
+The API key is a classroom isolation mechanism, not a replacement for user
 authentication. It lets assigned students explore public reads only within
 their workspace. Any identity can reset only its own workspace for convenience;
 never copy this reset policy into a production system.
@@ -107,7 +120,7 @@ with the migrations applied. The test launcher starts a local HTTP server with
 that database URL, creates an isolated workspace, exercises it, and cleans up
 only its generated workspace. Do not point it at classroom data.
 
-## Disable the lab after class
+## Disable the API after class
 
 Remove or disable the Vercel deployment and revoke its database connection
 credential in the provider. If retaining the database, keep or delete classroom

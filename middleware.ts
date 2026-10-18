@@ -4,7 +4,7 @@ function allowedMethods(path: string): string[] | undefined {
   if (path === "/api/health" || path === "/api/services" || path === "/api/slots" || path === "/api/me" || path === "/api/bookings") {
     return path === "/api/bookings" ? ["GET", "POST"] : ["GET"];
   }
-  if (path === "/api/lab/reset") return ["POST"];
+  if (path === "/api/reset") return ["POST"];
   if (/^\/api\/services\/[^/]+$/.test(path)) return ["GET"];
   if (/^\/api\/slots\/[^/]+$/.test(path)) return ["GET", "PATCH"];
   if (/^\/api\/bookings\/[^/]+$/.test(path)) return ["GET", "PATCH"];

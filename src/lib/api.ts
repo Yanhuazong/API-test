@@ -7,6 +7,7 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly fields?: Record<string, string[]>,
+    readonly headers?: Record<string, string>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -22,6 +23,8 @@ export function fail(
   throw new ApiError(status, code, message, fields);
 }
 
+export const rateLimitHeaders = new WeakMap<Request, Record<string, string>>();
+
 export async function api<T>(
   request: Request,
   handler: (requestId: string) => Promise<T>,
@@ -34,7 +37,7 @@ export async function api<T>(
     const body = isPaginated(data) ? data : { data };
     return NextResponse.json(
       body,
-      { status, headers: { ...Object.fromEntries(new Headers(headers)), "Cache-Control": "no-store", "X-Request-Id": requestId } },
+      { status, headers: { ...Object.fromEntries(new Headers(headers)), ...rateLimitHeaders.get(request), "Cache-Control": "no-store", "X-Request-Id": requestId } },
     );
   } catch (error) {
     if (error instanceof ApiError) {
@@ -47,7 +50,7 @@ export async function api<T>(
           },
           requestId,
         },
-        { status: error.status, headers: { "Cache-Control": "no-store", "X-Request-Id": requestId } },
+        { status: error.status, headers: { ...rateLimitHeaders.get(request), ...error.headers, "Cache-Control": "no-store", "X-Request-Id": requestId } },
       );
     }
     console.error(JSON.stringify({ event: "api_error", requestId, errorType: error instanceof Error ? error.name : "unknown" }));
