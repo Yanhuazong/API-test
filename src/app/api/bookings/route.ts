@@ -4,7 +4,7 @@ import { z } from "zod";
 import { api, fail } from "@/lib/api";
 import { authenticate } from "@/lib/auth";
 import { getDb, schema } from "@/db";
-import { lockWorkspace } from "@/lib/seed";
+import { createBooking } from "@/lib/bookings";
 import { pagination, readJson, validate } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -66,48 +66,7 @@ export async function POST(request: Request) {
     const { workspace, user } = await authenticate(request, true);
     if (user.role !== "student") fail(403, "STUDENT_ONLY", "Only students can create bookings.");
     const body = validate(z.object({ slotId: z.string().uuid() }).strict(), await readJson(request));
-    const db = getDb();
-    const booking = await db.transaction(async (tx) => {
-      if (!await lockWorkspace(tx, workspace.id)) fail(404, "WORKSPACE_NOT_FOUND", "The workspace was not found.");
-      const [slot] = await tx.select({
-        id: schema.slots.id,
-        status: schema.slots.status,
-        startsAt: schema.slots.startsAt,
-      }).from(schema.slots)
-        .innerJoin(schema.services, and(
-          eq(schema.slots.serviceId, schema.services.id),
-          eq(schema.slots.workspaceId, schema.services.workspaceId),
-        ))
-        .where(and(
-          eq(schema.slots.workspaceId, workspace.id),
-          eq(schema.slots.id, body.slotId),
-          eq(schema.services.publicationStatus, "published"),
-        )).limit(1);
-      if (!slot) fail(404, "SLOT_NOT_FOUND", "The slot was not found.");
-      if (slot.status !== "open" || slot.startsAt <= new Date()) {
-        fail(409, "SLOT_NOT_BOOKABLE", "The slot is closed or has already started.");
-      }
-      const [active] = await tx.select({ id: schema.bookings.id }).from(schema.bookings).where(and(
-        eq(schema.bookings.workspaceId, workspace.id),
-        eq(schema.bookings.slotId, body.slotId),
-        eq(schema.bookings.status, "active"),
-      )).limit(1);
-      if (active) fail(409, "SLOT_UNAVAILABLE", "The slot already has an active booking.");
-      const [created] = await tx.insert(schema.bookings).values({
-        id: bookingId,
-        workspaceId: workspace.id,
-        studentId: user.id,
-        slotId: body.slotId,
-        status: "active",
-      }).returning({
-        id: schema.bookings.id,
-        studentId: schema.bookings.studentId,
-        slotId: schema.bookings.slotId,
-        status: schema.bookings.status,
-        createdAt: schema.bookings.createdAt,
-      });
-      return { ...created, createdAt: created.createdAt.toISOString() };
-    });
+    const booking = await createBooking(workspace.id, user.id, body.slotId, bookingId);
     return booking;
   }, 201);
   if (response.status === 201) response.headers.set("Location", `/api/bookings/${bookingId}`);

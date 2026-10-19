@@ -23,6 +23,7 @@ export default function Home() {
           <li>Ask your instructor for your private handout file.</li>
           <li>Open the <Link href="/advising">campus advising website</Link>, paste the handout, and book and cancel appointments. Watch the API calls it makes.</li>
           <li>Open the <Link href="/explorer">API explorer</Link> to send your own requests to each endpoint and read the responses.</li>
+          <li>Try the <Link href="/graphql">GraphQL explorer</Link> to get the same data a different way.</li>
           <li>Optionally repeat the exercises in Postman, then work through the investigation worksheet.</li>
         </ol>
         <p><strong>Classroom isolation:</strong> Your API key confines requests to one workspace.
@@ -30,6 +31,8 @@ export default function Home() {
       </section>
       <nav aria-label="Student resources" style={{ display: "grid", gap: 12 }}>
         <Link style={linkStyle} href="/explorer">API explorer: try every endpoint in your browser</Link>
+        <Link style={linkStyle} href="/graphql">GraphQL explorer: the same data, one URL, you choose the fields</Link>
+        <Link style={linkStyle} href="/docs/graphql-guide">GraphQL guide</Link>
         <Link style={linkStyle} href="/advising">Campus advising website: a real app built on the API</Link>
         <Link style={linkStyle} href="/docs/build-your-first-requests">Build your first requests in Postman (optional)</Link>
         <Link style={linkStyle} href="/docs/student-api-guide">Student API guide</Link>
