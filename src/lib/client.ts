@@ -75,6 +75,7 @@ export interface CallResult {
   responseBody: string;
   ms: number;
   at: string;
+  startedAt: number;
   networkError?: string;
 }
 
@@ -110,6 +111,7 @@ export async function sendRequest(credentials: Credentials | null, options: Send
     requestHeaders: shown,
     requestBody: options.body,
     at: new Date().toLocaleTimeString(),
+    startedAt: Date.now(),
   };
   try {
     const response = await fetch(url, { method: options.method, headers, body: options.body, cache: "no-store" });

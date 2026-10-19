@@ -68,7 +68,7 @@ function App({ credentials }: { credentials: Credentials }) {
       contentType: body === undefined ? null : "application/json",
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    setLog((previous) => [result, ...previous].slice(0, 40));
+    setLog((previous) => [result, ...previous].sort((a, b) => b.startedAt - a.startedAt).slice(0, 40));
     setSelectedLog(null);
     const left = result.responseHeaders["x-ratelimit-remaining"];
     if (left !== undefined) setRemaining(left);
