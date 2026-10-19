@@ -12,21 +12,26 @@ export default function Home() {
         API Investigation
       </h1>
       <p style={{ fontSize: "1.2rem", lineHeight: 1.65, maxWidth: 700 }}>
-        Explore a working fictional campus advising API with Postman. Investigate JSON,
+        Explore a working fictional campus advising API in your browser: use a booking website built on it, then
+        send your own requests to every endpoint. Investigate JSON,
         endpoints, data models, validation, authentication, authorization, and who can
         see or change each record—without building a backend.
       </p>
       <section style={{ background: "white", padding: 24, borderRadius: 12, margin: "28px 0" }}>
         <h2>Start here</h2>
         <ol style={{ lineHeight: 1.9 }}>
-          <li>Ask your instructor for the private credentials for your assigned workspace.</li>
-          <li>Import the Postman collection and environment; set the supplied credentials locally.</li>
-          <li>Read the API guide, then work through the investigation worksheet.</li>
+          <li>Ask your instructor for your private handout file.</li>
+          <li>Open the <Link href="/advising">campus advising website</Link>, paste the handout, and book and cancel appointments. Watch the API calls it makes.</li>
+          <li>Open the <Link href="/explorer">API explorer</Link> to send your own requests to each endpoint and read the responses.</li>
+          <li>Optionally repeat the exercises in Postman, then work through the investigation worksheet.</li>
         </ol>
         <p><strong>Classroom isolation:</strong> Your API key confines requests to one workspace.
           It is a teaching boundary, not a production authentication system.</p>
       </section>
       <nav aria-label="Student resources" style={{ display: "grid", gap: 12 }}>
+        <Link style={linkStyle} href="/explorer">API explorer: try every endpoint in your browser</Link>
+        <Link style={linkStyle} href="/advising">Campus advising website: a real app built on the API</Link>
+        <Link style={linkStyle} href="/docs/build-your-first-requests">Build your first requests in Postman (optional)</Link>
         <Link style={linkStyle} href="/docs/student-api-guide">Student API guide</Link>
         <Link style={linkStyle} href="/docs/student-investigation">Guided investigation worksheet</Link>
         <a style={linkStyle} href="/postman/API_Investigation.postman_collection.json">Postman collection</a>

@@ -40,7 +40,7 @@ async function createWorkspace(name: string): Promise<TestWorkspace> {
 
 export function headers(workspace: TestWorkspace, identity?: keyof TestWorkspace["tokens"], extra?: HeadersInit): Headers {
   const result = new Headers(extra);
-  result.set("X-API-Key", workspace.key);
+  if (!result.has("X-API-Key")) result.set("X-API-Key", workspace.key);
   if (identity) result.set("Authorization", `Bearer ${workspace.tokens[identity]}`);
   return result;
 }

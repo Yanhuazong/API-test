@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 const documents: Record<string, string> = {
+  "build-your-first-requests": "build-your-first-requests.md",
   "student-api-guide": "student-api-guide.md",
   "student-investigation": "student-investigation.md",
 };

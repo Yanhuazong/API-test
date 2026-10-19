@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it, test } from "node:test";
+import { beforeEach, describe, it } from "node:test";
 import { installFixtureHooks, lab, otherLab, rateLab, callApi, pool, resetWorkspace } from "./fixture";
 
 describe("teaching API integration", () => {
@@ -174,21 +174,21 @@ describe("teaching API integration", () => {
     assert.equal(first.rows[0].count, "2");
     assert.equal(secondAfter.rows[0].count, secondBefore.rows[0].count);
   });
-});
 
-test("rate limiting returns 429 with Retry-After, and reset is exempt", async () => {
-  const first = await callApi(rateLab, "/api/services");
-  const limit = Number(first.headers.get("X-RateLimit-Limit"));
-  assert.equal(first.status, 200);
-  assert.equal(Number(first.headers.get("X-RateLimit-Remaining")), limit - 1);
-  let limited: Response | undefined;
-  for (let i = 1; i <= limit && !limited; i += 1) {
-    const response = await callApi(rateLab, "/api/services");
-    if (response.status === 429) limited = response;
-  }
-  assert.ok(limited, "expected a 429 response");
-  assert.equal((await limited.json()).error.code, "RATE_LIMITED");
-  assert.ok(Number(limited.headers.get("Retry-After")) >= 1);
-  assert.equal(limited.headers.get("X-RateLimit-Remaining"), "0");
-  assert.equal((await callApi(rateLab, "/api/reset", "studentA", { method: "POST" })).status, 200);
+  it("rate limiting returns 429 with Retry-After, and reset is exempt", async () => {
+    const first = await callApi(rateLab, "/api/services");
+    const limit = Number(first.headers.get("X-RateLimit-Limit"));
+    assert.equal(first.status, 200);
+    assert.equal(Number(first.headers.get("X-RateLimit-Remaining")), limit - 1);
+    let limited: Response | undefined;
+    for (let i = 1; i <= limit && !limited; i += 1) {
+      const response = await callApi(rateLab, "/api/services");
+      if (response.status === 429) limited = response;
+    }
+    assert.ok(limited, "expected a 429 response");
+    assert.equal((await limited.json()).error.code, "RATE_LIMITED");
+    assert.ok(Number(limited.headers.get("Retry-After")) >= 1);
+    assert.equal(limited.headers.get("X-RateLimit-Remaining"), "0");
+    assert.equal((await callApi(rateLab, "/api/reset", "studentA", { method: "POST" })).status, 200);
+  });
 });

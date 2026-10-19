@@ -55,7 +55,10 @@ Provision with `npm run class:provision -- --count 6`. Distribute each distinct
 `class-output/workspace-NN/handout.json` to only the assigned pair. It contains
 that workspace's key, Student A/B and advisor tokens, and a non-secret seed
 manifest. Do not email a shared six-workspace bundle or commit these files.
-Students import the Postman template and copy credentials locally.
+Students first build six requests by hand in their own Postman environment
+(see `docs/build-your-first-requests.md`), copying values from their handout.
+They may then import the collection and environment template for the rest.
+Credentials stay local.
 
 ## Deploy to Vercel
 
@@ -65,6 +68,22 @@ deploy. Run `npm run db:migrate` against the intended database before enabling
 the deployment. Provision workspaces from a trusted local environment using
 the same `DATABASE_URL`, then distribute handouts securely. Route Handlers use
 the Node.js runtime and are compatible with Vercel's Node functions.
+
+## Browser tools for students
+
+Students can work entirely in the browser:
+
+- `/advising` is a booking website that calls the API; its right-hand panel
+  lists each call. Every button click costs one or two API requests.
+- `/explorer` lets students build and send any request, including deliberately
+  broken ones (no key, wrong person, bad JSON).
+
+Both read the handout file students paste in and keep it in session storage for
+that tab only. Both count against the rate limit. At the default of 10 requests
+per minute the booking website will hit 429 quickly, which is a good five-minute
+demo but frustrating for open exploration. Consider `RATE_LIMIT_PER_MINUTE=60`
+for general use and lowering it for the rate-limit exercise. "Start over" in
+the website and `POST /api/reset` are never counted.
 
 ## Rate limiting
 

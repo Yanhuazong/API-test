@@ -1,6 +1,11 @@
 # Guided investigation worksheet
 
-Use your assigned Postman environment. Before each exercise, set the identity
+Complete the website and explorer activities (or the
+[Postman build-by-hand page](./build-your-first-requests.md)) first. The
+`/explorer` page can send every request in this worksheet, so Postman is
+optional.
+
+Use your assigned Postman environment (or the explorer). Before each exercise, set the identity
 on that request explicitly. Do not leave a shared “current user” variable that
 silently changes later requests.
 

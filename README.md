@@ -1,8 +1,19 @@
 # API Investigation
 
 A complete, fictional campus advising API for undergraduate students to explore
-with Postman. Students investigate endpoint contracts and data boundaries; they
-do not build the backend.
+in the browser and, optionally, in Postman. Students investigate endpoint
+contracts and data boundaries; they do not build the backend.
+
+## What students use
+
+- `/advising`: a small booking website built on the API. Students book and
+  cancel appointments, and a side panel shows every API call the page makes.
+- `/explorer`: lists every endpoint with fields to fill in and a **Send request**
+  button. It shows the request that was sent and the full response.
+- Postman (optional): the collection and environment under `postman/`.
+
+Students paste their private handout file into either page. The credentials are
+kept only in that browser tab (session storage).
 
 ## Quick start
 
