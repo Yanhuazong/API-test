@@ -40,6 +40,10 @@ environment. Do not expose a service-role or database credential to the browser.
 | `npm run lint`, `npm run typecheck`, `npm run build` | Static and production checks |
 | `npm run test:integration` | HTTP tests against test workspace in `INTEGRATION_DATABASE_URL` |
 | `npm run test:concurrency` | Real concurrent HTTP booking requests plus database-state verification |
+| `npm run test:agent`, `npm run test:agent-unit` | Agent lab and MCP server tests; see `docs/agent-lab-guide.md` |
+
+The instructor-only agent lab (`/agent`, MCP server at `/api/mcp`) has its own
+guide: `docs/agent-lab-guide.md`.
 
 To change the schema, add a new sequentially numbered SQL migration in
 `drizzle/`. Do not change a migration that has already been applied to any

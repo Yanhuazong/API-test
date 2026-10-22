@@ -16,9 +16,14 @@
     "class:reset": "tsx scripts/reset.ts",
     "class:refresh-dates": "tsx scripts/refresh-dates.ts",
     "test:integration": "tsx scripts/run-http-tests.ts integration",
-    "test:concurrency": "tsx scripts/run-http-tests.ts concurrency"
+    "test:concurrency": "tsx scripts/run-http-tests.ts concurrency",
+    "test:agent": "tsx scripts/run-http-tests.ts agent",
+    "test:agent-unit": "tsx --test tests/agent-unit.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.0.0",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/server": "^2.3.1",
     "drizzle-orm": "^0.45.4",
     "graphql": "^16.14.2",
     "next": "^15.5.3",

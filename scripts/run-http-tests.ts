@@ -63,7 +63,7 @@ async function waitForServer(child: ReturnType<typeof spawn>) {
 }
 
 async function main() {
-  if (mode !== "integration" && mode !== "concurrency") throw new Error("Use integration or concurrency mode.");
+  if (mode !== "integration" && mode !== "concurrency" && mode !== "agent") throw new Error("Use integration, concurrency, or agent mode.");
   await applyMigrations();
   const env = {
     ...process.env,
@@ -79,7 +79,7 @@ async function main() {
   });
   try {
     await waitForServer(server);
-    const testFile = mode === "integration" ? "tests/integration.test.ts" : "tests/concurrency.test.ts";
+    const testFile = mode === "integration" ? "tests/integration.test.ts" : mode === "agent" ? "tests/agent.test.ts" : "tests/concurrency.test.ts";
     const code = await run(process.execPath, [tsxBin, "--test", testFile], env);
     if (code !== 0) process.exitCode = code;
   } finally {

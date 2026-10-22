@@ -12,6 +12,10 @@ contracts and data boundaries; they do not build the backend.
   button. It shows the request that was sent and the full response.
 - Postman (optional): the collection and environment under `postman/`.
 
+Instructor only: `/agent` is an agent lab where an AI assistant operates the
+same API through an MCP server at `/api/mcp`. See the
+[agent lab guide](./docs/agent-lab-guide.md).
+
 Students paste their private handout file into either page. The credentials are
 kept only in that browser tab (session storage).
 
@@ -56,6 +60,10 @@ filename.
 | Variable | Required for | Purpose |
 |---|---|---|
 | `DATABASE_URL` | API, migrations, classroom scripts | Server-only PostgreSQL connection |
-| `INTEGRATION_DATABASE_URL` | Integration/concurrency tests | Separate disposable PostgreSQL database; tests refuse to run without it |
+| `INTEGRATION_DATABASE_URL` | Integration/concurrency/agent tests | Separate disposable PostgreSQL database; tests refuse to run without it |
+| `LLM_API_KEY` | Agent lab Live mode (optional) | Server-only Anthropic API key |
+| `INSTRUCTOR_PASSCODE` | Agent lab Live mode (optional) | Passcode typed into the Live tab |
+| `LLM_MODEL` | Agent lab Live mode (optional) | Model ID; default `claude-opus-5-5` |
+| `AGENT_API_BASE_URL` | Agent lab (optional) | Public base URL the MCP server calls; defaults to the request origin |
 
 No database URL or generated secret is printed by the setup scripts.

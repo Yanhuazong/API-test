@@ -40,6 +40,13 @@ export default function Home() {
         <a style={linkStyle} href="/postman/API_Investigation.postman_collection.json">Postman collection</a>
         <a style={linkStyle} href="/postman/API.postman_environment.json">Postman environment template</a>
       </nav>
+      <section aria-labelledby="agent-lab-card" style={{ background: "white", padding: 20, borderRadius: 12, marginTop: 28, border: "1px solid #d5e2ec" }}>
+        <p style={{ margin: 0, color: "#0e7490", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Instructor demo</p>
+        <h2 id="agent-lab-card" style={{ margin: "4px 0 8px" }}>
+          <Link style={linkStyle} href="/agent">Agent lab</Link>
+        </h2>
+        <p style={{ margin: 0 }}>Watch an AI assistant use this API through MCP tools, and judge whether it did what it claimed.</p>
+      </section>
       <p style={{ color: "#526879", marginTop: 36 }}>All people, services, and records are fictional.</p>
     </main>
   );
